@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+finance.db
+.pytest_cache/
