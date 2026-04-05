@@ -2,14 +2,27 @@ from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Primary hashing scheme for new passwords. This avoids bcrypt's raw 72-byte limit.
+pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
+# Legacy fallback for previously stored bcrypt hashes.
+legacy_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        if pwd_context.verify(plain_password, hashed_password):
+            return True
+    except (UnknownHashError, ValueError):
+        pass
+
+    try:
+        return legacy_pwd_context.verify(plain_password, hashed_password)
+    except (UnknownHashError, ValueError):
+        return False
 
 
 def get_password_hash(password: str) -> str:
